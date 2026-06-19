@@ -1,11 +1,16 @@
 # alpha,beta-CROWN config: L-inf robustness of mnist_fc (CPU, BaB, no Gurobi).
-# Paths are relative to this config file's directory (the repo root).
+#
+# Batch mode: general.csv_name lists one VNNLIB spec per line (model loaded once).
+# For a single-instance demo, override on the CLI with --vnnlib_path <file>.
 general:
   device: cpu                       # no CUDA on this machine
+  root_path: .                      # paths below are relative to this config's dir
+  csv_name: instances.csv           # one vnnlib path per line
 model:
   onnx_path: models/mnist_fc.onnx
+  input_shape: [-1, 784]            # required in batch mode (vnnlib carries no shape)
 specification:
-  vnnlib_path: vnnlib/sample0_eps0.05.vnnlib
+  vnnlib_path: null                 # null => use csv_name (batch mode)
 attack:
   pgd_order: before                 # run PGD first; finds counterexamples (falsified) fast
 bab:

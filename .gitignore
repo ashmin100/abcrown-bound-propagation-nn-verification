@@ -32,3 +32,9 @@ vnnlib/
 out.txt
 *.pkl
 results/**/*.pt
+
+# Transient run outputs (regenerated each run)
+instances.csv
+test_cex.txt
+results_raw.txt
+results/cex_s*.txt
