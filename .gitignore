@@ -24,6 +24,9 @@ CLAUDE.md
 # Course spec (not part of this project)
 assignment4.pdf
 
+# Generated VNNLIB specs (regenerate with gen_vnnlib.py)
+vnnlib/
+
 # Verifier run artifacts / logs
 *.log
 out.txt

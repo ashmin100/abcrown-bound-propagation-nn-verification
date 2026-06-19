@@ -1,0 +1,14 @@
+# alpha,beta-CROWN config: L-inf robustness of mnist_fc (CPU, BaB, no Gurobi).
+# Paths are relative to this config file's directory (the repo root).
+general:
+  device: cpu                       # no CUDA on this machine
+model:
+  onnx_path: models/mnist_fc.onnx
+specification:
+  vnnlib_path: vnnlib/sample0_eps0.05.vnnlib
+attack:
+  pgd_order: before                 # run PGD first; finds counterexamples (falsified) fast
+bab:
+  timeout: 60                       # match the Marabou timeout used in Assignment #3
+  branching:
+    method: kfsb                    # balanced branching heuristic
