@@ -89,52 +89,101 @@ python alpha-beta-CROWN/complete_verifier/abcrown.py \
 
 ### Quickstart
 ```bash
-python test.py --config configs/mnist_fc.yaml
+python gen_vnnlib.py        # generate VNNLIB robustness specs
+python test.py              # smoke test: verify two samples (one robust, one not)
+python run_experiments.py   # full study: 100-sample scan + ε sweep -> results/
+python analyze.py           # deep analyses + figures -> results/
 ```
 
 ## ⚙️ Configuration
 
-Verification runs are driven by YAML, the native α,β-CROWN format:
+Runs are driven by YAML, the native α,β-CROWN format. This project verifies an ONNX model
+against per-instance VNNLIB specs in batch mode (one spec per line of `instances.csv`):
 
 ```yaml
+general:
+  device: cpu                 # no CUDA: run on CPU
+  csv_name: instances.csv     # one VNNLIB spec per line (batch mode)
 model:
   onnx_path: models/mnist_fc.onnx
-data:
-  dataset: MNIST
+  input_shape: [-1, 784]
 specification:
-  norm: .inf
-  epsilon: 0.03        # ℓ∞ radius
-solver:
-  timeout: 60
+  vnnlib_path: null           # null => use csv_name
+bab:
+  timeout: 60                 # seconds per instance
+  branching:
+    method: kfsb              # branching heuristic
 ```
+
+The VNNLIB specs encode an ℓ∞ ball `x_i ± ε` (clipped to the valid input range) and the
+property "the true class stays the arg-max"; they are produced by `gen_vnnlib.py`.
 
 ## 📊 Results
 
-> 🚧 _Populated as experiments run._
+The model is a fully-connected MNIST classifier (`784→64→32→10`, ReLU). Two phases mirror
+an earlier Marabou study so the verifiers can be compared on identical instances.
 
-| ε | Verified | Falsified | Timeout | Avg. time |
-|:---:|:---:|:---:|:---:|:---:|
-| 0.01 | – | – | – | – |
-| 0.03 | – | – | – | – |
-| 0.05 | – | – | – | – |
+**Phase 1 — sample scan** (100 samples, ε=0.05): 96 verified robust, 4 falsified
+(samples 8, 33, 92, 96); mean 0.21 s per instance.
+
+**Phase 2 — robustness thresholds** (smallest ε with a counterexample):
+
+| sample | threshold ε |
+|:---:|:---:|
+| 0 | robust through 0.20 |
+| 8 | 0.03 |
+| 33 | 0.05 |
+
+### Verification time vs. ε
+On a robust sample, α,β-CROWN stays near-constant while the SMT solver grows steeply and
+hits its 300 s timeout for ε ≥ 0.19 — up to ~270× faster over the tested range.
+
+![runtime vs epsilon](results/fig_runtime_vs_eps.png)
+
+### Robustness radius over the test set
+Certifying all 100 samples is inexpensive here: 43/100 stay robust beyond ε=0.20.
+
+![robustness radius](results/fig_radius_hist.png)
+
+### How instances are resolved
+As ε grows, fewer instances are settled by the cheap CROWN bound; more need
+branch-and-bound, and more are falsified by the PGD attack.
+
+![resolution breakdown](results/fig_breakdown_area.png)
+
+### Counterexamples
+For a falsified sample, the verifier returns an adversarial input inside the ε-ball
+(original | adversarial | perturbation):
+
+![counterexample for sample 8](results/cex_s8.png)
 
 ## ⚔️ α,β-CROWN vs. Marabou
 
 | | α,β-CROWN | Marabou |
 |---|---|---|
-| Approach | Linear relaxation + BaB | SMT (Reluplex) |
-| Model format | ONNX / PyTorch | ONNX / NNet |
-| Configuration | YAML | Python API |
-| Speed / scalability | _TBD_ | _TBD_ |
+| Approach | Linear relaxation + branch-and-bound | SMT (Reluplex) |
+| Interface | Declarative YAML config | Python API |
+| Model input | ONNX or PyTorch | ONNX / NNet |
+| Property spec | VNNLIB or dataset + ε | per-variable bounds in code |
+| Verdicts on shared instances | identical to Marabou | identical to α,β-CROWN |
+| Robust sample at ε=0.20 | ~1.5 s | 300 s (timeout) |
+| Single small query (cold start) | ~2.5 s | ~0.5 s |
+
+Where both tools ran, their verdicts agree; α,β-CROWN scales far better at large ε, while
+Marabou has lower start-up cost for a single small query.
 
 ## 🗂️ Project Structure
 
 ```
-configs/        YAML verification configs
-models/         ONNX model + sample inputs
-test.py         minimal α,β-CROWN run on the model
-results/        recorded verification results
-report.pdf      analysis report
+gen_vnnlib.py          generate VNNLIB robustness specs
+abcrown_runner.py      batch-run α,β-CROWN and parse verdicts
+test.py                minimal demo (two samples)
+run_experiments.py     two-phase study (sample scan + ε sweep)
+analyze.py             deep analyses + figures
+mnist_fc.yaml          verification config
+models/                ONNX model + sample inputs
+results/               tables, CSVs, and figures
+exploration_report.md  α,β-CROWN models / config survey
 ```
 
 ## 📚 References
