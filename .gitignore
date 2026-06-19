@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Environments
+.venv/
+venv/
+env/
+
+# Datasets (downloadable, large)
+data/
+**/MNIST/
+
+# Cloned upstream verifier (install via README, do NOT commit)
+alpha-beta-CROWN/
+
+# Tooling / internal state
+.bkit/
+docs/
+CLAUDE.md
+
+# Course spec (not part of this project)
+assignment4.pdf
+
+# Verifier run artifacts / logs
+*.log
+out.txt
+*.pkl
+results/**/*.pt
