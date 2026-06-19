@@ -1,0 +1,46 @@
+# Pinned dependencies for running α,β-CROWN on this project.
+# Verified on macOS (Apple Silicon, arm64), Python 3.11, CPU-only.
+#
+# Notes:
+#  - torch/torchvision are the default PyPI CPU builds (arm64 native wheels).
+#    No CUDA on this machine, so verification runs with `--device cpu`.
+#  - gurobipy is required only because α,β-CROWN imports it unconditionally;
+#    we do NOT use Gurobi for solving (BaB-only), so no license is needed.
+#  - auto_LiRPA is installed separately as an editable package from the cloned
+#    alpha-beta-CROWN repo (see README): pip install -e alpha-beta-CROWN/auto_LiRPA
+
+# Deep learning (CPU)
+torch==2.8.0
+torchvision==0.23.0
+
+# Numerics
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.0
+pandas==3.0.3
+sympy==1.14.0
+mpmath==1.3.0
+
+# ONNX toolchain (load/convert the external model)
+onnx==1.22.0
+onnxruntime==1.27.0
+onnxoptimizer==0.4.2
+onnxsim==0.6.5
+skl2onnx==1.20.0
+onnx2pytorch @ git+https://github.com/Verified-Intelligence/onnx2pytorch.git
+
+# Solver / parallelism / utilities used by α,β-CROWN
+gurobipy==13.0.2
+ray==2.54.0
+pyyaml==6.0.3
+protobuf==7.35.1
+sortedcontainers==2.4.0
+psutil==7.2.2
+tqdm==4.68.3
+appdirs==1.4.4
+rich==15.0.0
+pillow==12.2.0
+networkx==3.6.1
+
+# Plotting (counterexample visualization)
+matplotlib>=3.7.0

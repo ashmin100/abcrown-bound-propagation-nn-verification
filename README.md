@@ -62,19 +62,30 @@ the SMT-based verifier [**Marabou**](https://github.com/NeuralNetworkVerificatio
 - A clone of [α,β-CROWN](https://github.com/Verified-Intelligence/alpha-beta-CROWN)
   *(installed separately — not vendored in this repo)*
 
-### Installation
+> Tested on macOS (Apple Silicon, arm64), Python 3.11, CPU-only.
+
 ```bash
-# 1. Clone this project
+# 1. Clone this project + the verifier (with its auto_LiRPA submodule)
 git clone https://github.com/ashmin100/abcrown-bound-propagation-nn-verification.git
 cd abcrown-bound-propagation-nn-verification
+git clone --recursive https://github.com/Verified-Intelligence/alpha-beta-CROWN.git
 
-# 2. Create the environment
-conda env create -f environment.yml      # or: pip install -r requirements.txt
+# 2. Create the environment and install dependencies
+conda create -n abcrown python=3.11
 conda activate abcrown
+pip install -r requirements.txt
+pip install -e alpha-beta-CROWN/auto_LiRPA      # editable install of auto_LiRPA
 
-# 3. Get the verifier (pinned commit — see docs)
-git clone https://github.com/Verified-Intelligence/alpha-beta-CROWN.git
+# 3. Sanity check (CPU)
+python alpha-beta-CROWN/complete_verifier/abcrown.py \
+  --config alpha-beta-CROWN/complete_verifier/exp_configs/tutorial_examples/mnist_cnn_a_adv.yaml \
+  --device cpu --end 2 --timeout 30
 ```
+
+> **Notes (macOS / Apple Silicon):**
+> - No CUDA → always pass `--device cpu`.
+> - `gurobipy` is imported by α,β-CROWN but unused here (BaB-only); no license needed.
+> - If `conda` errors with a libmamba/`libarchive` message, add `--solver classic`.
 
 ### Quickstart
 ```bash
