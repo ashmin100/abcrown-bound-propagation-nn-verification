@@ -158,7 +158,8 @@ analyze.py             심층 분석 + 그래프
 mnist_fc.yaml          검증 config
 models/                ONNX 모델 + 샘플 입력
 results/               표·CSV·그래프
-exploration_report.md  α,β-CROWN models/config 조사
+exploration_report.pdf α,β-CROWN models/config 조사
+report.pdf             분석 리포트 (영); report_ko.pdf (한)
 ```
 
 ## 📚 참고문헌

@@ -183,7 +183,8 @@ analyze.py             deep analyses + figures
 mnist_fc.yaml          verification config
 models/                ONNX model + sample inputs
 results/               tables, CSVs, and figures
-exploration_report.md  α,β-CROWN models / config survey
+exploration_report.pdf α,β-CROWN models / config survey
+report.pdf             analysis report (EN); report_ko.pdf (KO)
 ```
 
 ## 📚 References
