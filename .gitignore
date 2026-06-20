@@ -38,3 +38,11 @@ instances.csv
 test_cex.txt
 results_raw.txt
 results/cex_s*.txt
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
