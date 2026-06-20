@@ -1,0 +1,124 @@
+% Rendered with pdflatex. NeurIPS-style theme (matches report.tex).
+\documentclass[10pt]{article}
+\usepackage[letterpaper,left=1.1in,right=1.1in,top=0.8in,bottom=0.8in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{newtxtext,newtxmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+\setlength{\parskip}{2pt}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
+
+\newcommand{\abc}{$\alpha,\beta$-CROWN}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries Exploration Report: $\alpha,\beta$-CROWN\\[2pt]
+   Models and Configuration System}\\[10pt]
+  {\normalsize Jaemin Paek}\\[2pt]
+  \rule{\textwidth}{0.4pt}
+\end{center}
+
+\noindent
+This report surveys the \abc{} repository's built-in models directory and configuration
+system. All figures were obtained by inspecting the cloned repository at
+\texttt{complete\_verifier/} and cross-checked against the actual files (two independent
+counts per number).
+
+\section{What models are provided (architecture, format)}
+The built-in models live under \texttt{complete\_verifier/models/}, in 13 category
+directories (\texttt{bab\_attack, cifar10\_resnet, crown-ibp, custom\_op, custom\_specs,
+eran, l2\_norm, marabou\_cifar10, non\_relu, oval, sdp, toy, vnncomp22}).
+
+Models are stored as \textbf{PyTorch checkpoints}, not ONNX:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{lcl}
+\toprule
+Extension & Count & Meaning \\
+\midrule
+\texttt{.pth}  & 24 & PyTorch \texttt{state\_dict} checkpoints \\
+\texttt{.model}& 8  & PyTorch checkpoints (SDP naming) \\
+\texttt{.pkl}  & 4  & pickled weights \\
+\texttt{.pt}   & 1  & PyTorch checkpoint \\
+\texttt{.onnx} & \textbf{0} & (none in \texttt{models/}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+There are \textbf{no ONNX files} in the directory. The checkpoints hold only weights; the
+matching architectures are defined as $\sim$97 constructor functions in
+\texttt{model\_defs.py}, and a config selects one by \texttt{name:} and loads weights from
+\texttt{path:}. ONNX is supported for \emph{external} models (via \texttt{onnx\_path:}), but
+the bundled collection is PyTorch-based. By name keyword the architecture mix is
+approximately 35 ResNet, 29 CNN/conv, and 21 fully-connected/MLP networks, with no
+recurrent models --- i.e., small-to-medium CIFAR-10 and MNIST image classifiers drawn from
+verification benchmarks (ERAN, SDP, OVAL, CROWN-IBP, VNN-COMP).
+
+\section{What verification configurations are available}
+\abc{} is driven entirely by YAML. \texttt{exp\_configs/} contains \textbf{263 YAML files}
+across 10 directories:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{lc lc}
+\toprule
+Directory & Files & Directory & Files \\
+\midrule
+BICCOS & 128 & GCP-CROWN & 13 \\
+beta\_crown & 27 & vnncomp23 & 13 \\
+vnncomp22 & 27 & vnncomp25 & 9 \\
+tutorial\_examples & 18 & vnncomp24 & 8 \\
+vnncomp21 & 14 & bab\_attack & 6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Configs are organized by competition year (vnncomp21--25) and by algorithmic method
+(beta\_crown, GCP-CROWN, BICCOS), plus a tutorial set. A config has \textbf{9 top-level
+sections} (verified independently from \texttt{arguments.py}): \texttt{general, model, data,
+specification, solver, bab, attack, debug, solving}, exposing \textbf{308 options}. The most
+relevant keys are \texttt{model} (\texttt{name}+\texttt{path} or \texttt{onnx\_path},
+\texttt{input\_shape}); \texttt{data} (\texttt{dataset}, \texttt{mean}/\texttt{std},
+\texttt{start}/\texttt{end}); \texttt{specification} (\texttt{norm}, \texttt{epsilon}, or
+\texttt{vnnlib\_path}); \texttt{solver} (\texttt{batch\_size}, $\alpha$/$\beta$-CROWN rates);
+\texttt{bab} (\texttt{timeout}, \texttt{branching.method} $\in$ \{babsr, fsb, kfsb\}); and
+\texttt{attack} (PGD settings). The property is almost always an $\ell_\infty$ robustness
+ball: of configs that set a norm, 140 use \texttt{.inf} and 2 use $L_2$. Datasets are mostly
+CIFAR-10 and MNIST variants (e.g.\ \texttt{CIFAR\_SDP}, \texttt{MNIST\_SDP}, \texttt{\_ERAN}
+normalization variants, \texttt{CIFAR100}, \texttt{Customized}).
+
+\section{How \abc{}'s model specification differs from Marabou's}
+\begin{table}[H]\centering\small
+\begin{tabular}{lll}
+\toprule
+Aspect & \abc{} & Marabou \\
+\midrule
+Interface & declarative YAML config & imperative Python API (\texttt{maraboupy}) \\
+Model load & \texttt{name+path} (113 configs) or \texttt{onnx\_path} (4) & \texttt{Marabou.read\_onnx(path)} \\
+Input region & \texttt{epsilon} over dataset, or \texttt{vnnlib\_path} & per-variable \texttt{setLowerBound}/\texttt{setUpperBound} \\
+Output property & dataset auto-gen, or VNNLIB & hand-built \texttt{MarabouUtils.Equation} \\
+Batch runs & one CSV $\to$ many instances, one process & one script per query \\
+Solver control & config keys (branching, iterations, PGD) & a few API options \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\abc{} separates \emph{what to verify} (declarative config / VNNLIB) from the code, so a new
+experiment is a new YAML file. Marabou builds the query \emph{programmatically}: the model is
+read with \texttt{read\_onnx}, the input box is set variable by variable, and the output
+property is assembled from \texttt{Equation} objects in Python.
+
+\section{Organization compared with Marabou's resources}
+\abc{} ships a large, curated benchmark suite --- a models directory grouped by source plus
+263 ready-to-run configs organized by competition year and method. Marabou is closer to a
+verification \emph{library}: it provides the API and a few example networks, and the user
+writes the query script. The trade-off is convenience and reproducibility (\abc{}'s
+config/VNNLIB ecosystem) versus flexibility (Marabou's direct programmatic control).
+
+\end{document}

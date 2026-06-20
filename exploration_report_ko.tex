@@ -1,0 +1,123 @@
+% Rendered with xelatex. NeurIPS-style theme; Korean via kotex (AppleMyungjo) + Times.
+\documentclass[10pt]{article}
+\usepackage[letterpaper,left=1.1in,right=1.1in,top=0.8in,bottom=0.8in]{geometry}
+\usepackage{kotex}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\setmainhangulfont{AppleMyungjo}[AutoFakeBold=2.2]
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+\setlength{\parskip}{2pt}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
+
+\newcommand{\abc}{$\alpha,\beta$-CROWN}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries 탐색 리포트: $\alpha,\beta$-CROWN\\[2pt]
+   모델 및 설정 시스템}\\[10pt]
+  {\normalsize 백재민}\\[2pt]
+  \rule{\textwidth}{0.4pt}
+\end{center}
+
+\noindent
+본 리포트는 \abc{} 저장소의 내장 모델 디렉토리와 설정 시스템을 조사한다. 모든 수치는
+클론한 저장소의 \texttt{complete\_verifier/}를 직접 점검하여 얻었으며, 실제 파일과
+교차검증했다(수치마다 독립적으로 두 번 카운트).
+
+\section{어떤 모델이 제공되는가 (아키텍처·포맷)}
+내장 모델은 \texttt{complete\_verifier/models/} 아래 13개 카테고리 디렉토리에 있다
+(\texttt{bab\_attack, cifar10\_resnet, crown-ibp, custom\_op, custom\_specs, eran, l2\_norm,
+marabou\_cifar10, non\_relu, oval, sdp, toy, vnncomp22}).
+
+모델은 ONNX가 아니라 \textbf{PyTorch 체크포인트}로 저장된다:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{lcl}
+\toprule
+확장자 & 개수 & 의미 \\
+\midrule
+\texttt{.pth}  & 24 & PyTorch \texttt{state\_dict} 체크포인트 \\
+\texttt{.model}& 8  & PyTorch 체크포인트 (SDP 명명) \\
+\texttt{.pkl}  & 4  & pickle 가중치 \\
+\texttt{.pt}   & 1  & PyTorch 체크포인트 \\
+\texttt{.onnx} & \textbf{0} & (디렉토리 내 없음) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+디렉토리에 \textbf{ONNX 파일은 없다}. 체크포인트는 가중치만 담고, 대응되는 아키텍처는
+\texttt{model\_defs.py}의 약 97개 생성자 함수로 정의되며, config가 \texttt{name:}으로
+아키텍처를 고르고 \texttt{path:}에서 가중치를 로드한다. ONNX는 \emph{외부} 모델용으로
+(\texttt{onnx\_path:}) 지원되지만, 내장 컬렉션은 PyTorch 기반이다. 이름 키워드 기준 아키텍처
+구성은 대략 ResNet 35, CNN/conv 29, 완전연결/MLP 21이며 순환 모델은 없다 --- 즉 검증
+벤치마크(ERAN, SDP, OVAL, CROWN-IBP, VNN-COMP)에서 가져온 소형~중형 CIFAR-10 및 MNIST
+이미지 분류기다.
+
+\section{어떤 검증 설정(YAML)이 있는가}
+\abc{}는 전적으로 YAML로 구동된다. \texttt{exp\_configs/}에는 10개 디렉토리에 걸쳐
+\textbf{263개의 YAML} 파일이 있다:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{lc lc}
+\toprule
+디렉토리 & 개수 & 디렉토리 & 개수 \\
+\midrule
+BICCOS & 128 & GCP-CROWN & 13 \\
+beta\_crown & 27 & vnncomp23 & 13 \\
+vnncomp22 & 27 & vnncomp25 & 9 \\
+tutorial\_examples & 18 & vnncomp24 & 8 \\
+vnncomp21 & 14 & bab\_attack & 6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+설정은 대회 연도(vnncomp21--25)와 알고리즘 방법(beta\_crown, GCP-CROWN, BICCOS), 그리고
+튜토리얼 세트로 구성된다. 한 config는 \textbf{9개의 최상위 섹션}을 가지며
+(\texttt{arguments.py}에서 독립 확인): \texttt{general, model, data, specification, solver,
+bab, attack, debug, solving}, 총 \textbf{308개 옵션}을 노출한다. 주요 키는 \texttt{model}
+(\texttt{name}+\texttt{path} 또는 \texttt{onnx\_path}, \texttt{input\_shape}); \texttt{data}
+(\texttt{dataset}, \texttt{mean}/\texttt{std}, \texttt{start}/\texttt{end});
+\texttt{specification} (\texttt{norm}, \texttt{epsilon} 또는 \texttt{vnnlib\_path});
+\texttt{solver} (\texttt{batch\_size}, $\alpha$/$\beta$-CROWN 학습률); \texttt{bab}
+(\texttt{timeout}, \texttt{branching.method} $\in$ \{babsr, fsb, kfsb\}); \texttt{attack}
+(PGD 설정)이다. 속성은 거의 항상 $\ell_\infty$ 강건성 공이다: norm을 지정한 config 중 140개가
+\texttt{.inf}, 2개가 $L_2$다. 데이터셋은 대부분 CIFAR-10·MNIST 변종이다(예:
+\texttt{CIFAR\_SDP}, \texttt{MNIST\_SDP}, \texttt{\_ERAN} 정규화 변종, \texttt{CIFAR100},
+\texttt{Customized}).
+
+\section{\abc{}의 모델 명세는 Marabou와 어떻게 다른가}
+\begin{table}[H]\centering\small
+\begin{tabular}{lll}
+\toprule
+항목 & \abc{} & Marabou \\
+\midrule
+인터페이스 & 선언형 YAML config & 명령형 Python API (\texttt{maraboupy}) \\
+모델 로드 & \texttt{name+path} (113개) 또는 \texttt{onnx\_path} (4개) & \texttt{Marabou.read\_onnx(path)} \\
+입력 영역 & dataset+\texttt{epsilon}, 또는 \texttt{vnnlib\_path} & 변수별 \texttt{setLowerBound}/\texttt{setUpperBound} \\
+출력 속성 & dataset 자동 생성, 또는 VNNLIB & 직접 작성한 \texttt{MarabouUtils.Equation} \\
+배치 실행 & CSV 1개 $\to$ 다수 인스턴스, 단일 프로세스 & 쿼리당 스크립트 1개 \\
+솔버 제어 & config 키(분기, 반복, PGD) & 소수의 API 옵션 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\abc{}는 \emph{무엇을 검증할지}(선언형 config / VNNLIB)를 코드와 분리하므로, 새 실험은 새
+YAML 파일이 된다. Marabou는 쿼리를 \emph{프로그래밍적으로} 구성한다: \texttt{read\_onnx}로
+모델을 읽고, 입력 박스를 변수 단위로 설정하며, 출력 속성을 Python의 \texttt{Equation}
+객체로 조립한다.
+
+\section{Marabou 리소스와의 조직 비교}
+\abc{}는 크고 정제된 벤치마크 모음을 제공한다 --- 출처별로 묶인 모델 디렉토리와, 대회
+연도·방법별로 정리된 263개의 실행 가능 config. Marabou는 검증 \emph{라이브러리}에 가깝다:
+API와 소수의 예제 네트워크를 제공하고, 사용자가 쿼리 스크립트를 직접 작성한다. 절충은
+편의성·재현성(\abc{}의 config/VNNLIB 생태계) 대 유연성(Marabou의 직접적 프로그래밍 제어)이다.
+
+\end{document}
